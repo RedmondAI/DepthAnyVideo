@@ -22,6 +22,16 @@ def seed_all(seed: int = 0):
     torch.cuda.manual_seed_all(seed)
 
 
+def cast_to_float32(module):
+    """
+    Recursively cast all submodules and their parameters to float32.
+    """
+    for child in module.children():
+        cast_to_float32(child)
+    if isinstance(module, torch.nn.Module):
+        module.float()
+
+
 if "__main__" == __name__:
     logging.basicConfig(level=logging.INFO)
 
@@ -109,8 +119,8 @@ if "__main__" == __name__:
     unet = unet.float()
     unet_interp = unet_interp.float()
 
-    # **New Edit:** Ensure the `time_embedding` module uses float32
-    unet.time_embedding = unet.time_embedding.float()
+    # **Edit 1:** Recursively cast the `time_embedding` module to float32
+    cast_to_float32(unet.time_embedding)
 
     pipe = DAVPipeline(
         vae=vae,
