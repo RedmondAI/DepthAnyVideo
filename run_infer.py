@@ -32,6 +32,9 @@ def cast_to_float32(module):
         cast_to_float32(child)
     if isinstance(module, torch.nn.Module):
         module.float()
+        # **Edit 3:** Ensure buffers are also cast to float32
+        for buffer_name, buffer in module.named_buffers():
+            module.register_buffer(buffer_name, buffer.float())
 
 
 if "__main__" == __name__:
@@ -121,9 +124,16 @@ if "__main__" == __name__:
     unet = unet.float()
     unet_interp = unet_interp.float()
 
-    # **Edit 1:** Recursively cast all submodules within `unet` to float32
+    # **Edit 1:** Recursively cast all submodules within `unet` and `unet_interp` to float32
     cast_to_float32(unet)
     cast_to_float32(unet_interp)
+
+    # **Edit 4:** Explicitly cast the `time_embedding` submodules to float32
+    # This addresses potential nested modules that might retain float16
+    if hasattr(unet, 'time_embedding'):
+        cast_to_float32(unet.time_embedding)
+    if hasattr(unet_interp, 'time_embedding'):
+        cast_to_float32(unet_interp.time_embedding)
 
     pipe = DAVPipeline(
         vae=vae,
@@ -155,6 +165,13 @@ if "__main__" == __name__:
 
             # Disable automatic mixed precision to ensure all operations use float32
             with torch.cuda.amp.autocast(enabled=False):
+                # **Edit 5:** Add debug statements to verify tensor dtypes before inference
+                print(f"image_tensor dtype: {image_tensor.dtype}")
+                for name, param in unet.named_parameters():
+                    print(f"Unet parameter '{name}' dtype: {param.dtype}")
+                for name, param in unet.time_embedding.named_parameters():
+                    print(f"Unet Time Embedding parameter '{name}' dtype: {param.dtype}")
+                
                 pipe_out = pipe(
                     image_tensor,
                     num_frames=cfg.num_frames,
@@ -202,6 +219,13 @@ if "__main__" == __name__:
 
         # Disable automatic mixed precision to ensure all operations use float32
         with torch.cuda.amp.autocast(enabled=False):
+            # **Edit 5:** Add debug statements to verify tensor dtypes before inference
+            print(f"image_tensor dtype: {image_tensor.dtype}")
+            for name, param in unet.named_parameters():
+                print(f"Unet parameter '{name}' dtype: {param.dtype}")
+            for name, param in unet.time_embedding.named_parameters():
+                print(f"Unet Time Embedding parameter '{name}' dtype: {param.dtype}")
+            
             pipe_out = pipe(
                 image_tensor,
                 num_frames=cfg.num_frames,
