@@ -132,13 +132,15 @@ if "__main__" == __name__:
                 torch.from_numpy(_img / 255.0).permute(2, 0, 1).float() for _img in image  # Ensure tensor is float32
             ]).to(device)
 
-            pipe_out = pipe(
-                image_tensor,
-                num_frames=cfg.num_frames,
-                num_overlap_frames=cfg.num_overlap_frames,
-                num_interp_frames=cfg.num_interp_frames,
-                decode_chunk_size=cfg.decode_chunk_size,
-            )
+            # Disable automatic mixed precision to ensure all operations use float32
+            with torch.cuda.amp.autocast(enabled=False):
+                pipe_out = pipe(
+                    image_tensor,
+                    num_frames=cfg.num_frames,
+                    num_overlap_frames=cfg.num_overlap_frames,
+                    num_interp_frames=cfg.num_interp_frames,
+                    decode_chunk_size=cfg.decode_chunk_size,
+                )
 
             disparity = pipe_out.disparity
             disparity_colored = pipe_out.disparity_colored
@@ -177,13 +179,15 @@ if "__main__" == __name__:
             torch.from_numpy(_img / 255.0).permute(2, 0, 1).float() for _img in image  # Ensure tensor is float32
         ]).to(device)
 
-        pipe_out = pipe(
-            image_tensor,
-            num_frames=cfg.num_frames,
-            num_overlap_frames=cfg.num_overlap_frames,
-            num_interp_frames=cfg.num_interp_frames,
-            decode_chunk_size=cfg.decode_chunk_size,
-        )
+        # Disable automatic mixed precision to ensure all operations use float32
+        with torch.cuda.amp.autocast(enabled=False):
+            pipe_out = pipe(
+                image_tensor,
+                num_frames=cfg.num_frames,
+                num_overlap_frames=cfg.num_overlap_frames,
+                num_interp_frames=cfg.num_interp_frames,
+                decode_chunk_size=cfg.decode_chunk_size,
+            )
 
         disparity = pipe_out.disparity
         disparity_colored = pipe_out.disparity_colored
