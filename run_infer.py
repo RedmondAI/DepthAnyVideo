@@ -132,10 +132,9 @@ if "__main__" == __name__:
             image = img_utils.read_image(img_path)
             image = img_utils.imresize_max(image, cfg.max_resolution)
             image = img_utils.imcrop_multi(image)
-            image_tensor = [_img / 255.0 for _img in image]
-            image_tensor = [
-                torch.from_numpy(_img).permute(2, 0, 1).to(device) for _img in image_tensor
-            ]
+            image_tensor = torch.stack([
+                torch.from_numpy(_img / 255.0).permute(2, 0, 1) for _img in image
+            ]).to(device)
 
             pipe_out = pipe(
                 image_tensor,
@@ -178,10 +177,9 @@ if "__main__" == __name__:
 
         image = img_utils.imresize_max(image, cfg.max_resolution)
         image = img_utils.imcrop_multi(image)
-        image_tensor = [_img / 255.0 for _img in image]
-        image_tensor = [
-            torch.from_numpy(_img).permute(2, 0, 1).to(device) for _img in image_tensor
-        ]
+        image_tensor = torch.stack([
+            torch.from_numpy(_img / 255.0).permute(2, 0, 1) for _img in image
+        ]).to(device)
 
         pipe_out = pipe(
             image_tensor,
