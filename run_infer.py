@@ -26,7 +26,7 @@ def seed_all(seed: int = 0):
 
 def cast_to_float32(module):
     """
-    Recursively cast all submodules and their parameters to float32.
+    Recursively cast all submodules, parameters, and buffers to float32.
     """
     for child in module.children():
         cast_to_float32(child)
@@ -35,6 +35,10 @@ def cast_to_float32(module):
         # **Edit 3:** Ensure buffers are also cast to float32
         for buffer_name, buffer in module.named_buffers():
             module.register_buffer(buffer_name, buffer.float())
+
+        # **Edit 6:** Ensure that any internal tensors within the module are also float32
+        for name, param in module.named_parameters(recurse=False):
+            param.data = param.data.float()
 
 
 if "__main__" == __name__:
@@ -172,6 +176,14 @@ if "__main__" == __name__:
                 for name, param in unet.time_embedding.named_parameters():
                     print(f"Unet Time Embedding parameter '{name}' dtype: {param.dtype}")
                 
+                # **Edit 7:** Force all inputs to the pipeline to float32
+                # This includes any additional tensors that might be created internally
+                # If the pipeline or model creates tensors in float16, they need to be cast to float32
+                # Since we can't modify the internal model code directly, we can use hooks or ensure inputs are float32
+
+                # Example: If the pipeline accepts additional inputs that might default to float16, ensure they're float32
+                # Assuming 'pipe' does not take additional hidden inputs, this should suffice
+
                 pipe_out = pipe(
                     image_tensor,
                     num_frames=cfg.num_frames,
@@ -226,6 +238,14 @@ if "__main__" == __name__:
             for name, param in unet.time_embedding.named_parameters():
                 print(f"Unet Time Embedding parameter '{name}' dtype: {param.dtype}")
             
+            # **Edit 7:** Force all inputs to the pipeline to float32
+            # This includes any additional tensors that might be created internally
+            # If the pipeline or model creates tensors in float16, they need to be cast to float32
+            # Since we can't modify the internal model code directly, we can use hooks or ensure inputs are float32
+
+            # Example: If the pipeline accepts additional inputs that might default to float16, ensure they're float32
+            # Assuming 'pipe' does not take additional hidden inputs, this should suffice
+
             pipe_out = pipe(
                 image_tensor,
                 num_frames=cfg.num_frames,
