@@ -38,7 +38,7 @@ if "__main__" == __name__:
 
     # data setting
     parser.add_argument(
-        "--data_dir", type=str, required=True, help="input data directory."
+        "--data_dir", type=str, required=True, help="input data directory or file."
     )
 
     parser.add_argument(
@@ -119,54 +119,98 @@ if "__main__" == __name__:
 
     file_name = cfg.data_dir.split("/")[-1].split(".")[0]
     is_video = cfg.data_dir.endswith(".mp4")
-    if is_video:
-        num_interp_frames = cfg.num_interp_frames
-        num_overlap_frames = cfg.num_overlap_frames
-        num_frames = cfg.num_frames
-        assert num_frames % 2 == 0, "num_frames should be even."
-        assert (
-            2 <= num_overlap_frames <= (num_interp_frames + 2 + 1) // 2
-        ), "Invalid frame overlap."
-        max_frames = (num_interp_frames + 2 - num_overlap_frames) * (num_frames // 2)
-        image, fps = img_utils.read_video(cfg.data_dir, max_frames=max_frames)
+
+    if os.path.isdir(cfg.data_dir):
+        # Handle directory of images
+        image_files = [
+            os.path.join(cfg.data_dir, f)
+            for f in os.listdir(cfg.data_dir)
+            if f.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+        for img_path in image_files:
+            logging.info(f"Processing image: {img_path}")
+            image = img_utils.read_image(img_path)
+            image = img_utils.imresize_max(image, cfg.max_resolution)
+            image = img_utils.imcrop_multi(image)
+            image_tensor = [_img / 255.0 for _img in image]
+            image_tensor = [
+                torch.from_numpy(_img).permute(0, 3, 1, 2).to(device) for _img in image_tensor
+            ]
+
+            pipe_out = pipe(
+                image_tensor,
+                num_frames=cfg.num_frames,
+                num_overlap_frames=cfg.num_overlap_frames,
+                num_interp_frames=cfg.num_interp_frames,
+                decode_chunk_size=cfg.decode_chunk_size,
+            )
+
+            disparity = pipe_out.disparity
+            disparity_colored = pipe_out.disparity_colored
+            image = pipe_out.image
+            # (N, H, 2 * W, 3)
+            merged = np.concatenate(
+                [
+                    image,
+                    disparity_colored,
+                ],
+                axis=2,
+            )
+
+            output_file = os.path.join(
+                cfg.output_dir, f"{os.path.splitext(os.path.basename(img_path))[0]}.png"
+            )
+            img_utils.write_image(output_file, merged[0])
+            logging.info(f"Saved output to {output_file}")
     else:
-        image = img_utils.read_image(cfg.data_dir)
+        if is_video:
+            num_interp_frames = cfg.num_interp_frames
+            num_overlap_frames = cfg.num_overlap_frames
+            num_frames = cfg.num_frames
+            assert num_frames % 2 == 0, "num_frames should be even."
+            assert (
+                2 <= num_overlap_frames <= (num_interp_frames + 2 + 1) // 2
+            ), "Invalid frame overlap."
+            max_frames = (num_interp_frames + 2 - num_overlap_frames) * (num_frames // 2)
+            image, fps = img_utils.read_video(cfg.data_dir, max_frames=max_frames)
+        else:
+            image = img_utils.read_image(cfg.data_dir)
 
-    image = img_utils.imresize_max(image, cfg.max_resolution)
-    image = img_utils.imcrop_multi(image)
-    image_tensor = [_img / 255.0 for _img in image]
-    image_tensor = [
-        torch.from_numpy(_img).permute(0, 3, 1, 2).to(device) for _img in image_tensor
-    ]
+        image = img_utils.imresize_max(image, cfg.max_resolution)
+        image = img_utils.imcrop_multi(image)
+        image_tensor = [_img / 255.0 for _img in image]
+        image_tensor = [
+            torch.from_numpy(_img).permute(0, 3, 1, 2).to(device) for _img in image_tensor
+        ]
 
-    pipe_out = pipe(
-        image_tensor,
-        num_frames=cfg.num_frames,
-        num_overlap_frames=cfg.num_overlap_frames,
-        num_interp_frames=cfg.num_interp_frames,
-        decode_chunk_size=cfg.decode_chunk_size,
-    )
-
-    disparity = pipe_out.disparity
-    disparity_colored = pipe_out.disparity_colored
-    image = pipe_out.image
-    # (N, H, 2 * W, 3)
-    merged = np.concatenate(
-        [
-            image,
-            disparity_colored,
-        ],
-        axis=2,
-    )
-
-    if is_video:
-        img_utils.write_video(
-            os.path.join(cfg.output_dir, f"{file_name}.mp4"),
-            merged,
-            fps,
+        pipe_out = pipe(
+            image_tensor,
+            num_frames=cfg.num_frames,
+            num_overlap_frames=cfg.num_overlap_frames,
+            num_interp_frames=cfg.num_interp_frames,
+            decode_chunk_size=cfg.decode_chunk_size,
         )
-    else:
-        img_utils.write_image(
-            os.path.join(cfg.output_dir, f"{file_name}.png"),
-            merged[0],
+
+        disparity = pipe_out.disparity
+        disparity_colored = pipe_out.disparity_colored
+        image = pipe_out.image
+        # (N, H, 2 * W, 3)
+        merged = np.concatenate(
+            [
+                image,
+                disparity_colored,
+            ],
+            axis=2,
         )
+
+        if is_video:
+            img_utils.write_video(
+                os.path.join(cfg.output_dir, f"{file_name}.mp4"),
+                merged,
+                fps,
+            )
+        else:
+            img_utils.write_image(
+                os.path.join(cfg.output_dir, f"{file_name}.png"),
+                merged[0],
+            )
