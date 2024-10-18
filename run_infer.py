@@ -134,7 +134,7 @@ if "__main__" == __name__:
             image = img_utils.imcrop_multi(image)
             image_tensor = [_img / 255.0 for _img in image]
             image_tensor = [
-                torch.from_numpy(_img).permute(0, 3, 1, 2).to(device) for _img in image_tensor
+                torch.from_numpy(_img).permute(2, 0, 1).to(device) for _img in image_tensor
             ]
 
             pipe_out = pipe(
@@ -180,7 +180,7 @@ if "__main__" == __name__:
         image = img_utils.imcrop_multi(image)
         image_tensor = [_img / 255.0 for _img in image]
         image_tensor = [
-            torch.from_numpy(_img).permute(0, 3, 1, 2).to(device) for _img in image_tensor
+            torch.from_numpy(_img).permute(2, 0, 1).to(device) for _img in image_tensor
         ]
 
         pipe_out = pipe(
