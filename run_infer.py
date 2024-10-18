@@ -103,6 +103,7 @@ if "__main__" == __name__:
     scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(cfg.model_base, subfolder="scheduler", torch_dtype=torch.float32)
     unet = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet", torch_dtype=torch.float32)
     unet_interp = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet_interp", torch_dtype=torch.float32)
+
     pipe = DAVPipeline(
         vae=vae,
         unet=unet,
@@ -110,7 +111,7 @@ if "__main__" == __name__:
         scheduler=scheduler,
     )
     pipe.num_inference_steps = cfg.denoise_steps  # Set the number of inference steps
-    pipe = pipe.to(device)
+    pipe = pipe.to(device, dtype=torch.float32)  # Ensure pipeline is in float32
 
     file_name = cfg.data_dir.split("/")[-1].split(".")[0]
     is_video = cfg.data_dir.endswith(".mp4")
@@ -128,7 +129,7 @@ if "__main__" == __name__:
             image = img_utils.imresize_max(image, cfg.max_resolution)
             image = img_utils.imcrop_multi(image)
             image_tensor = torch.stack([
-                torch.from_numpy(_img / 255.0).permute(2, 0, 1) for _img in image
+                torch.from_numpy(_img / 255.0).permute(2, 0, 1).float() for _img in image  # Ensure tensor is float32
             ]).to(device)
 
             pipe_out = pipe(
@@ -173,7 +174,7 @@ if "__main__" == __name__:
         image = img_utils.imresize_max(image, cfg.max_resolution)
         image = img_utils.imcrop_multi(image)
         image_tensor = torch.stack([
-            torch.from_numpy(_img / 255.0).permute(2, 0, 1) for _img in image
+            torch.from_numpy(_img / 255.0).permute(2, 0, 1).float() for _img in image  # Ensure tensor is float32
         ]).to(device)
 
         pipe_out = pipe(
