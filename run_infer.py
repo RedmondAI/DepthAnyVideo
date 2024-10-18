@@ -132,12 +132,14 @@ if "__main__" == __name__:
     cast_to_float32(unet)
     cast_to_float32(unet_interp)
 
-    # **Edit 4:** Explicitly cast the `time_embedding` submodules to float32
-    # This addresses potential nested modules that might retain float16
+    # **Edit 8:** Add forward hooks to enforce float32 on `time_embedding` module
+    def enforce_float32_hook(module, input, output):
+        return output.float()
+
     if hasattr(unet, 'time_embedding'):
-        cast_to_float32(unet.time_embedding)
+        unet.time_embedding.register_forward_hook(enforce_float32_hook)
     if hasattr(unet_interp, 'time_embedding'):
-        cast_to_float32(unet_interp.time_embedding)
+        unet_interp.time_embedding.register_forward_hook(enforce_float32_hook)
 
     pipe = DAVPipeline(
         vae=vae,
@@ -166,6 +168,16 @@ if "__main__" == __name__:
             image_tensor = torch.stack([
                 torch.from_numpy(_img / 255.0).permute(2, 0, 1).float() for _img in image  # Ensure tensor is float32
             ]).to(device)
+
+            # **Edit 9:** Add a forward hook to monitor the input dtype of `time_embedding`
+            def check_dtype_hook(module, input, output):
+                print(f"Input to {module.__class__.__name__}: dtype={input[0].dtype}")
+                return output
+
+            if hasattr(unet, 'time_embedding'):
+                unet.time_embedding.register_forward_hook(check_dtype_hook)
+            if hasattr(unet_interp, 'time_embedding'):
+                unet_interp.time_embedding.register_forward_hook(check_dtype_hook)
 
             # Disable automatic mixed precision to ensure all operations use float32
             with torch.cuda.amp.autocast(enabled=False):
