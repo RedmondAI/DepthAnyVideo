@@ -115,6 +115,7 @@ if "__main__" == __name__:
         unet_interp=unet_interp,
         scheduler=scheduler,
     )
+    pipe.num_inference_steps = cfg.denoise_steps  # Set the number of inference steps
     pipe = pipe.to(device)
 
     file_name = cfg.data_dir.split("/")[-1].split(".")[0]
