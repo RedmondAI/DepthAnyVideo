@@ -170,6 +170,23 @@ if "__main__" == __name__:
         if isinstance(module, torch.nn.Conv2d):
             module.register_forward_pre_hook(enforce_conv_float32_pre_hook)
 
+    # **Edit 12:** Add forward pre-hooks for Linear layers to enforce float32 inputs
+    def enforce_linear_float32_pre_hook(module, input):
+        """
+        Cast the input tensor to float32 before linear operations to prevent dtype mismatches.
+        """
+        return (input[0].float(),)
+
+    # Register the pre-hook for all Linear layers in `unet`
+    for name, module in unet.named_modules():
+        if isinstance(module, torch.nn.Linear):
+            module.register_forward_pre_hook(enforce_linear_float32_pre_hook)
+
+    # Register the pre-hook for all Linear layers in `unet_interp`
+    for name, module in unet_interp.named_modules():
+        if isinstance(module, torch.nn.Linear):
+            module.register_forward_pre_hook(enforce_linear_float32_pre_hook)
+
     pipe = DAVPipeline(
         vae=vae,
         unet=unet,
@@ -318,3 +335,4 @@ if "__main__" == __name__:
                 os.path.join(cfg.output_dir, f"{file_name}.png"),
                 merged[0],
             )
+
