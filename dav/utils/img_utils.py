@@ -1,6 +1,7 @@
 from PIL import Image
 import cv2
 import numpy as np
+from skimage.transform import resize  # Ensure resize is imported from skimage.transform
 
 
 def resize(img, size):
@@ -31,14 +32,14 @@ def crop(img, start_h, start_w, crop_h, crop_w):
     return img_src
 
 
-def imresize_max(img, size, min_side=False):
+def imresize_max(image, max_resolution):
+    """
+    Resize image to have the maximum resolution specified.
+    """
     new_img = []
-    for i, _img in enumerate(img):
-        h, w = _img.shape[:2]
-        ori_size = min(h, w) if min_side else max(h, w)
-        resize = min(size / ori_size, 1.0)
-        new_size = (int(w * resize), int(h * resize))
-        new_img.append(resize(_img, new_size))
+    new_size = (max_resolution, max_resolution)
+    for _img in image:
+        new_img.append(resize(_img, new_size))  # Use the imported resize function
     return new_img
 
 
