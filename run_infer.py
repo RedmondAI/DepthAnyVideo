@@ -106,9 +106,11 @@ if "__main__" == __name__:
 
     # Force model components that support .float() to use float32
     vae = vae.float()
-    # scheduler = scheduler.float()  # ... removed this line ...
     unet = unet.float()
     unet_interp = unet_interp.float()
+
+    # **New Edit:** Ensure the `time_embedding` module uses float32
+    unet.time_embedding = unet.time_embedding.float()
 
     pipe = DAVPipeline(
         vae=vae,
