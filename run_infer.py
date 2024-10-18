@@ -11,6 +11,8 @@ from dav.models import UNetSpatioTemporalRopeConditionModel
 from diffusers import AutoencoderKLTemporalDecoder, FlowMatchEulerDiscreteScheduler
 from dav.utils import img_utils
 
+# **Edit 2:** Set global default dtype to float32
+torch.set_default_dtype(torch.float32)
 
 def seed_all(seed: int = 0):
     """
@@ -114,13 +116,14 @@ if "__main__" == __name__:
     unet = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet", torch_dtype=torch.float32)
     unet_interp = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet_interp", torch_dtype=torch.float32)
 
-    # Force model components that support .float() to use float32
+    # Force all model components to use float32 recursively
     vae = vae.float()
     unet = unet.float()
     unet_interp = unet_interp.float()
 
-    # **Edit 1:** Recursively cast the `time_embedding` module to float32
-    cast_to_float32(unet.time_embedding)
+    # **Edit 1:** Recursively cast all submodules within `unet` to float32
+    cast_to_float32(unet)
+    cast_to_float32(unet_interp)
 
     pipe = DAVPipeline(
         vae=vae,
