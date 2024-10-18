@@ -99,16 +99,10 @@ if "__main__" == __name__:
     os.makedirs(cfg.output_dir, exist_ok=True)
     logging.info(f"output dir = {cfg.output_dir}")
 
-    vae = AutoencoderKLTemporalDecoder.from_pretrained(cfg.model_base, subfolder="vae")
-    scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
-        cfg.model_base, subfolder="scheduler"
-    )
-    unet = UNetSpatioTemporalRopeConditionModel.from_pretrained(
-        cfg.model_base, subfolder="unet"
-    )
-    unet_interp = UNetSpatioTemporalRopeConditionModel.from_pretrained(
-        cfg.model_base, subfolder="unet_interp"
-    )
+    vae = AutoencoderKLTemporalDecoder.from_pretrained(cfg.model_base, subfolder="vae", torch_dtype=torch.float32)
+    scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(cfg.model_base, subfolder="scheduler", torch_dtype=torch.float32)
+    unet = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet", torch_dtype=torch.float32)
+    unet_interp = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet_interp", torch_dtype=torch.float32)
     pipe = DAVPipeline(
         vae=vae,
         unet=unet,
