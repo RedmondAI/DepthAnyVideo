@@ -141,6 +141,18 @@ if "__main__" == __name__:
     if hasattr(unet_interp, 'time_embedding'):
         unet_interp.time_embedding.register_forward_hook(enforce_float32_hook)
 
+    # **Edit 10:** Add forward pre-hooks to ensure `t_emb` is cast to float32 before entering `time_embedding`
+    def enforce_float32_pre_hook(module, input):
+        """
+        Cast the input tensor to float32 to prevent dtype mismatches.
+        """
+        return (input[0].float(),)
+
+    if hasattr(unet, 'time_embedding'):
+        unet.time_embedding.register_forward_pre_hook(enforce_float32_pre_hook)
+    if hasattr(unet_interp, 'time_embedding'):
+        unet_interp.time_embedding.register_forward_pre_hook(enforce_float32_pre_hook)
+
     pipe = DAVPipeline(
         vae=vae,
         unet=unet,
