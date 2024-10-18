@@ -104,6 +104,12 @@ if "__main__" == __name__:
     unet = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet", torch_dtype=torch.float32)
     unet_interp = UNetSpatioTemporalRopeConditionModel.from_pretrained(cfg.model_base, subfolder="unet_interp", torch_dtype=torch.float32)
 
+    # Force all model components to use float32
+    vae = vae.float()
+    scheduler = scheduler.float()
+    unet = unet.float()
+    unet_interp = unet_interp.float()
+
     pipe = DAVPipeline(
         vae=vae,
         unet=unet,
