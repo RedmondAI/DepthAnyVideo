@@ -155,7 +155,8 @@ if "__main__" == __name__:
     image = pipe_out.image
     
     # Save individual disparity frames as 16-bit grayscale PNGs
-    os.makedirs(os.path.join(cfg.output_dir, "disparity"), exist_ok=True)
+    disparity_dir = os.path.join(cfg.output_dir, "disparity")
+    os.makedirs(disparity_dir, exist_ok=True)
     
     # Convert disparity to 16-bit format
     # Normalize to full 16-bit range (0-65535)
@@ -163,15 +164,38 @@ if "__main__" == __name__:
         # Normalize disparity to 0-1 range
         disp_min = disp_frame.min()
         disp_max = disp_frame.max()
-        print(disp_min, disp_max)
         disp_normalized = (disp_frame - disp_min) / (disp_max - disp_min)
         
         # Convert to 16-bit
-        disp_16bit = (disp_normalized * 65535).astype(np.uint16)
+        disp_16bit = (disp_frame * 65535).astype(np.uint16)
         
         # Save as PNG
-        output_path = os.path.join(cfg.output_dir, "disparity", f"{file_name}_{i:06d}.png")
+        output_path = os.path.join(disparity_dir, f"{file_name}_{i:06d}.png")
         img_utils.write_image(output_path, disp_16bit)
+
+    # Create MP4 from the disparity PNGs if we have more than one frame
+    if len(disparity) > 1:
+        import subprocess
+        
+        # Construct ffmpeg command
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-y',  # Overwrite output file if it exists
+            '-framerate', str(fps),
+            '-i', os.path.join(disparity_dir, f'{file_name}_%06d.png'),
+            '-c:v', 'libx264',
+            '-crf', '17',  # High quality (0-51, lower is better)
+            '-preset', 'slow',  # Slower encoding = better compression
+            '-pix_fmt', 'yuv420p',  # Standard pixel format for compatibility
+            os.path.join(cfg.output_dir, f"{file_name}_disparity.mp4")
+        ]
+        
+        # Execute ffmpeg command
+        try:
+            subprocess.run(ffmpeg_cmd, check=True)
+            print(f"Successfully created disparity video: {file_name}_disparity.mp4")
+        except subprocess.CalledProcessError as e:
+            print(f"Error creating video: {e}")
 
     # Original visualization code
     merged = np.concatenate(
